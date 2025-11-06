@@ -1,104 +1,127 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>Cadastro e Busca de Veículos</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 15px; }
-        h1 { color: #333; text-align: center; }
-        form { margin-bottom: 20px; background-color: white; padding: 15px; border-radius: 8px; }
-        input, select { padding: 8px; margin: 4px 0; width: 100%; box-sizing: border-box; }
-        button { padding: 10px; margin-top: 8px; background-color: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 5px; }
-        button:hover { background-color: #45a049; }
-        .table-wrapper { overflow-x: auto; background-color: white; border-radius: 8px; padding: 10px; }
-        table { border-collapse: collapse; width: 100%; min-width: 900px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
-        th { background-color: #4CAF50; color: white; position: sticky; top: 0; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        @media(max-width: 600px) {
-            table { font-size: 12px; min-width: 700px; }
-            input, button { font-size: 14px; }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sistema de Veículos</title>
+  <style>
+    /* Dark theme: preto e cinza */
+    body { background:#111; color:#eee; font-family: Arial, sans-serif; margin:0; padding:0 16px 50px 16px;}
+    header { padding:16px 0; display:flex; align-items:center; justify-content:space-between; }
+    h1 { margin:0; font-size:20px; color:#fff; }
+    .card { background:#1b1b1b; border-radius:6px; padding:12px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.6);}
+    label { display:block; font-size:12px; color:#ccc; margin-bottom:4px; }
+    input[type=text], input[type=date], textarea { background:#2b2b2b; border:1px solid #333; color:#fff; padding:8px; width:100%; border-radius:4px; }
+    textarea { min-height:64px; resize:vertical; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .col { flex:1; min-width:160px; }
+    .btn { background:#2f2f2f; color:#fff; padding:8px 12px; border-radius:6px; border:none; cursor:pointer; }
+    .btn.primary { background:#3a7bd5; }
+    .btn.danger { background:#b23a3a; }
+    .table { width:100%; border-collapse:collapse; margin-top:12px; }
+    .table th, .table td { padding:8px; border-bottom:1px solid #222; font-size:13px; text-align:left; vertical-align:top;}
+    .small { font-size:12px; color:#bbb; }
+    .flex { display:flex; gap:8px; align-items:center; }
+    .search { width:260px; }
+    .msg { padding:8px; border-radius:6px; margin-bottom:8px; }
+    .msg.success { background:#153b18; color:#b6f0b6; }
+    .msg.error { background:#3b1515; color:#f0b6b6; }
+    a.link { color:#9fc5ff; text-decoration:none; }
+    footer { margin-top:20px; font-size:12px; color:#999; }
+  </style>
 </head>
 <body>
-    <h1>Cadastro e Busca de Veículos</h1>
-
-    <!-- Formulário de busca -->
-    <form method="POST">
-        <input type="text" name="placa" placeholder="Buscar veículo por placa" value="{{ query }}">
-        <button type="submit" name="buscar">Buscar</button>
-    </form>
-
-    <!-- Formulário de cadastro -->
-    <form method="POST">
-        <h3>Adicionar novo veículo</h3>
-        <input type="text" name="NOME" placeholder="Nome do proprietário" required>
-        <input type="text" name="NOME_MAE" placeholder="Nome da mãe">
-        <input type="date" name="DATA_NASCIMENTO" placeholder="Data de nascimento">
-        <input type="text" name="CPF_CNPJ" placeholder="CPF/CNPJ">
-        <input type="text" name="CONTATO" placeholder="Contato">
-        <input type="text" name="ENDERECO" placeholder="Endereço">
-        <input type="text" name="CIDADE" placeholder="Cidade">
-        <input type="text" name="MARCA" placeholder="Marca">
-        <input type="text" name="ANO" placeholder="Ano">
-        <input type="text" name="MODELO" placeholder="Modelo">
-        <input type="text" name="COR" placeholder="Cor">
-        <input type="text" name="PLACAS" placeholder="Placa" required>
-        <input type="text" name="TIPO_VEICULO" placeholder="Tipo de veículo">
-        <input type="text" name="N_PROCESSO" placeholder="Nº do processo">
-        <input type="text" name="BANCO" placeholder="Banco">
-        <input type="text" name="RESTRICOES" placeholder="Restrições">
-        <button type="submit" name="adicionar">Adicionar veículo</button>
-    </form>
-
-    <!-- Tabela de resultados -->
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Nome da mãe</th>
-                    <th>Data Nascimento</th>
-                    <th>CPF/CNPJ</th>
-                    <th>Contato</th>
-                    <th>Endereço</th>
-                    <th>Cidade</th>
-                    <th>Marca</th>
-                    <th>Ano</th>
-                    <th>Modelo</th>
-                    <th>Cor</th>
-                    <th>Placa</th>
-                    <th>Tipo</th>
-                    <th>Nº Processo</th>
-                    <th>Banco</th>
-                    <th>Restrições</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for v in veiculos %}
-                <tr>
-                    <td>{{ v[1] }}</td>
-                    <td>{{ v[2] }}</td>
-                    <td>{{ v[3] }}</td>
-                    <td>{{ v[4] }}</td>
-                    <td>{{ v[5] }}</td>
-                    <td>{{ v[6] }}</td>
-                    <td>{{ v[7] }}</td>
-                    <td>{{ v[8] }}</td>
-                    <td>{{ v[9] }}</td>
-                    <td>{{ v[10] }}</td>
-                    <td>{{ v[11] }}</td>
-                    <td>{{ v[12] }}</td>
-                    <td>{{ v[13] }}</td>
-                    <td>{{ v[14] }}</td>
-                    <td>{{ v[15] }}</td>
-                    <td>{{ v[16] }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <header>
+    <h1>🚗 Sistema de Veículos</h1>
+    <div class="flex">
+      <form method="get" action="/" style="display:flex; gap:8px; align-items:center;">
+        <input class="search" type="text" name="q" placeholder="Buscar por placa, nome, processo..." value="{{ query|default('') }}">
+        <button class="btn" type="submit">Buscar</button>
+        <a class="btn" href="{{ url_for('index') }}">Limpar</a>
+      </form>
     </div>
+  </header>
+
+  <div class="card">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="msg {{ 'success' if cat=='success' else 'error' }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Se estivermos editando, abre o formulário de edição; caso contrário, formulário de novo -->
+    {% if edit_registro is defined %}
+      <h3>Editar registro (índice {{ edit_index }})</h3>
+      <form method="post" action="{{ url_for('editar', idx=edit_index) }}">
+    {% else %}
+      <h3>Adicionar novo veículo</h3>
+      <form method="post" action="{{ url_for('adicionar') }}">
+    {% endif %}
+
+      <div class="row">
+        {% for i, campo in enumerate(campos) %}
+          <div class="col">
+            <label>{{ campo }}</label>
+            {% if campo == 'OBSERVAÇÃO' %}
+              <textarea name="{{ campo }}">{{ edit_registro[campo] if edit_registro is defined else '' }}</textarea>
+            {% elif campo == 'DATA DE NASCIMENTO' %}
+              <input type="date" name="{{ campo }}" value="{{ edit_registro[campo] if edit_registro is defined else '' }}">
+            {% else %}
+              <input type="text" name="{{ campo }}" value="{{ edit_registro[campo] if edit_registro is defined else '' }}">
+            {% endif %}
+          </div>
+          {% if (i+1) % 5 == 0 %}
+            </div><div class="row" style="margin-top:8px;">
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:10px;">
+        <button class="btn primary" type="submit">Salvar</button>
+        {% if edit_registro is defined %}
+          <a class="btn" href="{{ url_for('index') }}">Cancelar edição</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Registros ({{ registros|length }})</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          {% for c in campos %}
+            <th>{{ c }}</th>
+          {% endfor %}
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i, r in enumerate(registros) %}
+          <tr>
+            <td class="small">{{ i }}</td>
+            {% for c in campos %}
+              <td>{{ r[c] }}</td>
+            {% endfor %}
+            <td>
+              <form method="post" action="{{ url_for('excluir', idx=i) }}" style="display:inline">
+                <button class="btn danger" onclick="return confirm('Confirmar exclusão?')" type="submit">Excluir</button>
+              </form>
+              <a class="btn" href="{{ url_for('editar', idx=i) }}">Editar</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="{{ campos|length + 2 }}">Nenhum registro encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <div class="small">Salvo em arquivo <strong>banco.csv</strong>. Para atualizar no Render: salve, commit e push no GitHub.</div>
+  </footer>
 </body>
 </html>

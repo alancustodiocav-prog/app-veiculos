@@ -1,161 +1,118 @@
+from flask import Flask, render_template, request, redirect, url_for, flash
 import csv
 import os
 
-# Configurações
+app = Flask(__name__)
+app.secret_key = "troque_para_uma_chave_segura"
+
 ARQUIVO = "banco.csv"
 CAMPOS = [
-    "NOME", "NOME DA MÃE", "DATA DE NASCIMENTO", "CPF/CNPJ", "CONTATO",
-    "ENDEREÇO", "CIDADE", "MARCA", "ANO", "MODELO", "COR", "PLACA",
-    "TIPO DE VEICULO", "N DO PROCESSO", "BANCO", "RESTRIÇÕES", "OBSERVAÇÃO"
+    "NOME","NOME DA MÃE","DATA DE NASCIMENTO","CPF/CNPJ","CONTATO",
+    "ENDEREÇO","CIDADE","MARCA","ANO","MODELO","COR","PLACAS",
+    "TIPO DE VEICULO","N DO PROCESSO","BANCO","RESTRIÇÕES","OBSERVAÇÃO"
 ]
 
-# Cria o arquivo CSV se não existir
 def iniciar_arquivo():
     if not os.path.exists(ARQUIVO):
-        with open(ARQUIVO, mode="w", newline="", encoding="utf-8") as f:
-            escritor = csv.writer(f)
-            escritor.writerow(CAMPOS)
+        with open(ARQUIVO, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(CAMPOS)
 
-# Carrega dados do CSV
 def carregar_dados():
+    dados = []
     if not os.path.exists(ARQUIVO):
-        return []
-    with open(ARQUIVO, mode="r", encoding="utf-8") as f:
+        return dados
+    with open(ARQUIVO, "r", encoding="utf-8", newline="") as f:
         leitor = csv.DictReader(f)
-        return list(leitor)
+        for linha in leitor:
+            dados.append(linha)
+    return dados
 
-# Salva dados no CSV
 def salvar_dados(dados):
-    with open(ARQUIVO, mode="w", newline="", encoding="utf-8") as f:
-        escritor = csv.DictWriter(f, fieldnames=CAMPOS)
-        escritor.writeheader()
-        for linha in dados:
-            escritor.writerow(linha)
+    with open(ARQUIVO, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CAMPOS)
+        writer.writeheader()
+        for row in dados:
+            writer.writerow(row)
 
-# Função: Cadastrar veículo
-def cadastrar():
+# Home: lista + busca
+@app.route("/", methods=["GET"])
+def index():
+    iniciar_arquivo()
+    q = request.args.get("q", "").strip().upper()
     dados = carregar_dados()
-    registro = {campo: entradas[campo].get().upper() for campo in CAMPOS}
-    if not registro["PLACA"]:
-        messagebox.showerror("Erro", "O campo PLACA é obrigatório.")
-        return
-    dados.append(registro)
-    salvar_dados(dados)
+    if q:
+        # Busca por placa, nome, processo, ou CPF/CNPJ
+        resultados = []
+        for r in dados:
+            if (q in (r.get("PLACAS","") or "").upper()
+                or q in (r.get("NOME","") or "").upper()
+                or q in (r.get("N DO PROCESSO","") or "").upper()
+                or q in (r.get("CPF/CNPJ","") or "").upper()):
+                resultados.append(r)
+        dados = resultados
+    return render_template("index.html", registros=dados, campos=CAMPOS, query=q)
+
+# Adicionar novo registro
+@app.route("/adicionar", methods=["POST"])
+def adicionar():
+    iniciar_arquivo()
+    dados = carregar_dados()
+    novo = {}
     for campo in CAMPOS:
-        entradas[campo].delete(0, tk.END)
-    atualizar_lista()
-    messagebox.showinfo("Sucesso", "Veículo cadastrado com sucesso!")
+        # pega do form, se não existir coloca string vazia
+        valor = request.form.get(campo, "").strip()
+        # manter tudo em uppercase para consistência, exceto OBSERVAÇÃO (mantemos original)
+        if campo == "OBSERVAÇÃO":
+            novo[campo] = valor
+        else:
+            novo[campo] = valor.upper()
+    # valida placa mínima
+    if not novo.get("PLACAS"):
+        flash("PLACA é obrigatória", "error")
+        return redirect(url_for("index"))
+    dados.append(novo)
+    salvar_dados(dados)
+    flash("Registro cadastrado com sucesso.", "success")
+    return redirect(url_for("index"))
 
-# Função: Buscar por placa
-def buscar():
-    placa_busca = entrada_busca.get().strip().upper()
+# Excluir pelo índice (id na tabela)
+@app.route("/excluir/<int:idx>", methods=["POST"])
+def excluir(idx):
     dados = carregar_dados()
-    resultados = [d for d in dados if d["PLACA"] == placa_busca]
-    for item in tabela.get_children():
-        tabela.delete(item)
-    for row in resultados:
-        tabela.insert("", tk.END, values=[row[c] for c in CAMPOS])
-    if not resultados:
-        messagebox.showinfo("Resultado", "Nenhum veículo encontrado com essa placa.")
+    if 0 <= idx < len(dados):
+        placa = dados[idx].get("PLACAS","")
+        dados.pop(idx)
+        salvar_dados(dados)
+        flash(f"Registro com placa {placa} removido.", "success")
+    else:
+        flash("Índice inválido.", "error")
+    return redirect(url_for("index"))
 
-# Função: Atualizar listagem completa
-def atualizar_lista():
-    for item in tabela.get_children():
-        tabela.delete(item)
+# Página de edição (form preenchido)
+@app.route("/editar/<int:idx>", methods=["GET", "POST"])
+def editar(idx):
     dados = carregar_dados()
-    for row in dados:
-        tabela.insert("", tk.END, values=[row[c] for c in CAMPOS])
+    if idx < 0 or idx >= len(dados):
+        flash("Registro não encontrado.", "error")
+        return redirect(url_for("index"))
 
-# Função: Excluir veículo selecionado
-def excluir():
-    item_selecionado = tabela.focus()
-    if not item_selecionado:
-        messagebox.showwarning("Atenção", "Selecione um registro para excluir.")
-        return
-    valores = tabela.item(item_selecionado, "values")
-    placa = valores[11]
-    dados = carregar_dados()
-    novos = [d for d in dados if d["PLACA"] != placa]
-    salvar_dados(novos)
-    atualizar_lista()
-    messagebox.showinfo("Sucesso", f"Veículo com placa {placa} excluído com sucesso!")
+    if request.method == "POST":
+        for campo in CAMPOS:
+            valor = request.form.get(campo, "").strip()
+            if campo == "OBSERVAÇÃO":
+                dados[idx][campo] = valor
+            else:
+                dados[idx][campo] = valor.upper()
+        salvar_dados(dados)
+        flash("Registro atualizado com sucesso.", "success")
+        return redirect(url_for("index"))
+    else:
+        # GET -> mostra formulário com valores atuais
+        registro = dados[idx]
+        return render_template("index.html", registros=dados, campos=CAMPOS, edit_index=idx, edit_registro=registro)
 
-# ---------- INTERFACE ----------
-iniciar_arquivo()
-janela = tk.Tk()
-janela.title("🚗 Sistema de Veículos")
-janela.geometry("1300x700")
-janela.configure(bg="#1e1e1e")
-
-# Estilo Dark
-style = ttk.Style(janela)
-style.theme_use("clam")
-style.configure("Treeview",
-                background="#2b2b2b",
-                foreground="white",
-                rowheight=25,
-                fieldbackground="#2b2b2b",
-                font=("Segoe UI", 10))
-style.map("Treeview", background=[("selected", "#444444")])
-style.configure("Treeview.Heading",
-                background="#1e1e1e",
-                foreground="white",
-                font=("Segoe UI", 10, "bold"))
-style.configure("TButton",
-                background="#3a3a3a",
-                foreground="white",
-                font=("Segoe UI", 10, "bold"),
-                padding=6)
-style.map("TButton",
-          background=[("active", "#505050")])
-
-# ----- CAMPOS DE CADASTRO -----
-frame_form = tk.Frame(janela, bg="#1e1e1e")
-frame_form.pack(pady=10)
-
-entradas = {}
-colunas = [
-    ("NOME", "NOME DA MÃE", "DATA DE NASCIMENTO", "CPF/CNPJ", "CONTATO"),
-    ("ENDEREÇO", "CIDADE", "MARCA", "ANO", "MODELO"),
-    ("COR", "PLACA", "TIPO DE VEICULO", "N DO PROCESSO", "BANCO"),
-    ("RESTRIÇÕES", "OBSERVAÇÃO")
-]
-
-for linha in colunas:
-    linha_frame = tk.Frame(frame_form, bg="#1e1e1e")
-    linha_frame.pack(pady=2)
-    for campo in linha:
-        lbl = tk.Label(linha_frame, text=campo, fg="white", bg="#1e1e1e", width=15, anchor="w")
-        lbl.pack(side="left")
-        entrada = tk.Entry(linha_frame, width=25, bg="#2b2b2b", fg="white", insertbackground="white", relief="flat")
-        entrada.pack(side="left", padx=5)
-        entradas[campo] = entrada
-
-# ----- BOTÕES -----
-frame_btn = tk.Frame(janela, bg="#1e1e1e")
-frame_btn.pack(pady=10)
-
-ttk.Button(frame_btn, text="Cadastrar", command=cadastrar).pack(side="left", padx=10)
-ttk.Button(frame_btn, text="Excluir", command=excluir).pack(side="left", padx=10)
-ttk.Button(frame_btn, text="Atualizar Lista", command=atualizar_lista).pack(side="left", padx=10)
-
-# ----- BUSCA -----
-frame_busca = tk.Frame(janela, bg="#1e1e1e")
-frame_busca.pack(pady=10)
-tk.Label(frame_busca, text="Buscar por PLACA:", fg="white", bg="#1e1e1e").pack(side="left")
-entrada_busca = tk.Entry(frame_busca, width=20, bg="#2b2b2b", fg="white", insertbackground="white", relief="flat")
-entrada_busca.pack(side="left", padx=5)
-ttk.Button(frame_busca, text="Buscar", command=buscar).pack(side="left", padx=10)
-
-# ----- TABELA -----
-frame_tab = tk.Frame(janela, bg="#1e1e1e")
-frame_tab.pack(fill="both", expand=True, padx=10, pady=10)
-
-tabela = ttk.Treeview(frame_tab, columns=CAMPOS, show="headings")
-for campo in CAMPOS:
-    tabela.heading(campo, text=campo)
-    tabela.column(campo, width=120, anchor="center")
-tabela.pack(fill="both", expand=True)
-
-atualizar_lista()
-janela.mainloop()
+if __name__ == "__main__":
+    # para rodar local: flask usa porta dinâmica, Render define PORT var, usamos 0.0.0.0
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
