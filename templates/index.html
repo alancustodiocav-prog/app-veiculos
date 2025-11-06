@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sistema de Veículos</title>
   <style>
-    /* Dark theme: preto e cinza */
     body { background:#111; color:#eee; font-family: Arial, sans-serif; margin:0; padding:0 16px 50px 16px;}
     header { padding:16px 0; display:flex; align-items:center; justify-content:space-between; }
     h1 { margin:0; font-size:20px; color:#fff; }
@@ -51,9 +50,8 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Se estivermos editando, abre o formulário de edição; caso contrário, formulário de novo -->
     {% if edit_registro is defined %}
-      <h3>Editar registro (índice {{ edit_index }})</h3>
+      <h3>Editar registro ({{ edit_index }})</h3>
       <form method="post" action="{{ url_for('editar', idx=edit_index) }}">
     {% else %}
       <h3>Adicionar novo veículo</h3>
@@ -61,7 +59,7 @@
     {% endif %}
 
       <div class="row">
-        {% for i, campo in enumerate(campos) %}
+        {% for campo in campos %}
           <div class="col">
             <label>{{ campo }}</label>
             {% if campo == 'OBSERVAÇÃO' %}
@@ -72,9 +70,6 @@
               <input type="text" name="{{ campo }}" value="{{ edit_registro[campo] if edit_registro is defined else '' }}">
             {% endif %}
           </div>
-          {% if (i+1) % 5 == 0 %}
-            </div><div class="row" style="margin-top:8px;">
-          {% endif %}
         {% endfor %}
       </div>
 
@@ -100,17 +95,17 @@
         </tr>
       </thead>
       <tbody>
-        {% for i, r in enumerate(registros) %}
+        {% for r in registros %}
           <tr>
-            <td class="small">{{ i }}</td>
+            <td class="small">{{ loop.index0 }}</td>
             {% for c in campos %}
               <td>{{ r[c] }}</td>
             {% endfor %}
             <td>
-              <form method="post" action="{{ url_for('excluir', idx=i) }}" style="display:inline">
+              <form method="post" action="{{ url_for('excluir', idx=loop.index0) }}" style="display:inline">
                 <button class="btn danger" onclick="return confirm('Confirmar exclusão?')" type="submit">Excluir</button>
               </form>
-              <a class="btn" href="{{ url_for('editar', idx=i) }}">Editar</a>
+              <a class="btn" href="{{ url_for('editar', idx=loop.index0) }}">Editar</a>
             </td>
           </tr>
         {% else %}
